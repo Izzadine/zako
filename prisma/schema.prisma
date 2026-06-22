@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String    @id @default(cuid())
+  phone     String    @unique // identité de connexion, format +235XXXXXXXX
+  whatsapp  String? // numéro WhatsApp affiché (peut différer)
+  name      String?
+  isBlocked Boolean   @default(false)
+  role      Role      @default(USER)
+  createdAt DateTime  @default(now())
+  listings  Listing[]
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model Category {
+  id       String    @id @default(cuid())
+  slug     String    @unique
+  name     String
+  icon     String?
+  order    Int       @default(0)
+  listings Listing[]
+}
+
+model Listing {
+  id            String        @id @default(cuid())
+  title         String
+  description   String
+  price         Int // en FCFA, entier
+  status        ListingStatus @default(PENDING)
+  featured      Boolean       @default(false)
+  featuredUntil DateTime?
+
+  city     String  @default("N'Djaména")
+  district String?
+
+  whatsapp  String
+  allowCall Boolean @default(true)
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  photos     Photo[]
+
+  viewsCount Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([categoryId, status])
+  @@index([status, createdAt])
+  @@index([price])
+}
+
+enum ListingStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+  SOLD
+  DELETED
+}
+
+model Photo {
+  id        String  @id @default(cuid())
+  url       String
+  publicId  String
+  order     Int     @default(0)
+  listingId String
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+}
