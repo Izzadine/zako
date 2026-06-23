@@ -4,12 +4,18 @@ import type { Category, ListingDetail, ListingSummary, ListingFilters } from "@/
 
 const PER_PAGE = 20;
 
+const EMPTY_LISTINGS = { data: [] as ListingSummary[], total: 0, page: 1, totalPages: 1 };
+
 export async function getCategories(): Promise<Category[]> {
+  // Données de démo UNIQUEMENT si aucune base n'est configurée.
   if (!HAS_DB) return DEMO_CATEGORIES;
   try {
     return await prisma.category.findMany({ orderBy: { order: "asc" } });
-  } catch {
-    return DEMO_CATEGORIES;
+  } catch (e) {
+    // Erreur réelle de la base (ex. cold start Neon) : ne jamais servir de fausses
+    // données à un vrai visiteur — on renvoie vide.
+    console.error("[getCategories] DB error:", e);
+    return [];
   }
 }
 
@@ -60,8 +66,9 @@ export async function getListings(
       page,
       totalPages: Math.max(1, Math.ceil(total / PER_PAGE)),
     };
-  } catch {
-    return filterDemo(filters, page);
+  } catch (e) {
+    console.error("[getListings] DB error:", e);
+    return { ...EMPTY_LISTINGS, page };
   }
 }
 
@@ -90,8 +97,9 @@ export async function getListing(id: string): Promise<ListingDetail | null> {
       photos: l.photos.map((p) => ({ url: p.url })),
       viewsCount: l.viewsCount,
     };
-  } catch {
-    return DEMO_LISTINGS.find((l) => l.id === id) ?? null;
+  } catch (e) {
+    console.error("[getListing] DB error:", e);
+    return null;
   }
 }
 

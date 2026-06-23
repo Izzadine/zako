@@ -10,6 +10,8 @@ export function AdminListingRow({
   category,
   phone,
   thumbnail,
+  mode,
+  featured = false,
 }: {
   id: string;
   title: string;
@@ -17,6 +19,8 @@ export function AdminListingRow({
   category: string;
   phone: string;
   thumbnail: string | null;
+  mode: "pending" | "active";
+  featured?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -31,6 +35,10 @@ export function AdminListingRow({
     router.refresh();
   }
 
+  function remove() {
+    if (confirm(`Supprimer définitivement « ${title} » ?`)) act({ status: "DELETED" });
+  }
+
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-3 flex gap-3">
       <div className="w-16 h-16 rounded-lg bg-gray-100 shrink-0 overflow-hidden">
@@ -42,32 +50,57 @@ export function AdminListingRow({
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-medium line-clamp-1">{title}</p>
+        <p className="font-medium line-clamp-1">
+          {featured && mode === "active" && <span title="En avant">⭐ </span>}
+          {title}
+        </p>
         <p className="text-sm text-zako-red font-bold">{price}</p>
         <p className="text-xs text-gray-500">{category} · {phone}</p>
-        <div className="flex gap-2 mt-2">
-          <button
-            onClick={() => act({ status: "ACTIVE" })}
-            disabled={busy}
-            className="flex-1 bg-green-600 text-white text-sm font-bold py-2 rounded-lg disabled:opacity-50"
-          >
-            ✓ Valider
-          </button>
-          <button
-            onClick={() => act({ status: "ACTIVE", featured: true, featuredDays: 7 })}
-            disabled={busy}
-            className="bg-amber-500 text-white text-sm font-bold px-3 py-2 rounded-lg disabled:opacity-50"
-          >
-            ⭐
-          </button>
-          <button
-            onClick={() => act({ status: "REJECTED" })}
-            disabled={busy}
-            className="bg-gray-200 text-gray-700 text-sm font-bold px-3 py-2 rounded-lg disabled:opacity-50"
-          >
-            ✕
-          </button>
-        </div>
+
+        {mode === "pending" ? (
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={() => act({ status: "ACTIVE" })}
+              disabled={busy}
+              className="flex-1 bg-green-600 text-white text-sm font-bold py-2 rounded-lg disabled:opacity-50"
+            >
+              ✓ Valider
+            </button>
+            <button
+              onClick={() => act({ status: "ACTIVE", featured: true, featuredDays: 7 })}
+              disabled={busy}
+              title="Valider et mettre en avant"
+              className="bg-amber-500 text-white text-sm font-bold px-3 py-2 rounded-lg disabled:opacity-50"
+            >
+              ⭐
+            </button>
+            <button
+              onClick={() => act({ status: "REJECTED" })}
+              disabled={busy}
+              title="Rejeter"
+              className="bg-gray-200 text-gray-700 text-sm font-bold px-3 py-2 rounded-lg disabled:opacity-50"
+            >
+              ✕
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={() => act({ featured: !featured, featuredDays: 7 })}
+              disabled={busy}
+              className="flex-1 border border-amber-400 text-amber-600 text-sm font-bold py-2 rounded-lg disabled:opacity-50"
+            >
+              {featured ? "Retirer la mise en avant" : "⭐ Mettre en avant"}
+            </button>
+            <button
+              onClick={remove}
+              disabled={busy}
+              className="bg-zako-red text-white text-sm font-bold px-4 py-2 rounded-lg disabled:opacity-50"
+            >
+              🗑 Supprimer
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

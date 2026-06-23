@@ -5,13 +5,13 @@ import { formatPrice } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-async function getPending() {
+async function getByStatus(status: "PENDING" | "ACTIVE") {
   if (!HAS_DB) return [];
   try {
     return await prisma.listing.findMany({
-      where: { status: "PENDING" },
+      where: { status },
       include: { category: true, photos: { take: 1 }, user: true },
-      orderBy: { createdAt: "asc" },
+      orderBy: status === "PENDING" ? { createdAt: "asc" } : { createdAt: "desc" },
     });
   } catch {
     return [];
@@ -33,7 +33,11 @@ async function getStats() {
 }
 
 export default async function AdminPage() {
-  const [pending, stats] = await Promise.all([getPending(), getStats()]);
+  const [pending, active, stats] = await Promise.all([
+    getByStatus("PENDING"),
+    getByStatus("ACTIVE"),
+    getStats(),
+  ]);
 
   return (
     <div className="space-y-5">
@@ -71,12 +75,36 @@ export default async function AdminPage() {
             {pending.map((l) => (
               <AdminListingRow
                 key={l.id}
+                mode="pending"
                 id={l.id}
                 title={l.title}
                 price={formatPrice(l.price)}
                 category={l.category.name}
                 phone={l.whatsapp}
                 thumbnail={l.photos[0]?.url ?? null}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <h2 className="font-bold mb-2">Annonces en ligne ({active.length})</h2>
+        {active.length === 0 ? (
+          <p className="text-gray-500 text-sm py-6 text-center">Aucune annonce en ligne pour le moment.</p>
+        ) : (
+          <div className="space-y-3">
+            {active.map((l) => (
+              <AdminListingRow
+                key={l.id}
+                mode="active"
+                id={l.id}
+                title={l.title}
+                price={formatPrice(l.price)}
+                category={l.category.name}
+                phone={l.whatsapp}
+                thumbnail={l.photos[0]?.url ?? null}
+                featured={l.featured}
               />
             ))}
           </div>
