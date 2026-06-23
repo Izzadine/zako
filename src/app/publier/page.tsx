@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PhotoUploader, type UploadedPhoto } from "@/components/PhotoUploader";
+import { normalizeChadPhone } from "@/lib/utils";
 import type { Category } from "@/types";
 
 export default function PublishPage() {
@@ -39,12 +40,17 @@ export default function PublishPage() {
       setError("Merci de remplir les champs obligatoires.");
       return;
     }
+    const phone = normalizeChadPhone(form.whatsapp);
+    if (!phone) {
+      setError("Numéro WhatsApp invalide. Format : +235 et 8 chiffres (ex. +235 66 12 34 56).");
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await fetch("/api/listings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, price: Number(form.price), photos }),
+        body: JSON.stringify({ ...form, whatsapp: phone, price: Number(form.price), photos }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Erreur lors de la publication");
@@ -137,13 +143,31 @@ export default function PublishPage() {
         <div className="space-y-4">
           <h1 className="font-bold text-lg">3. Photos & contact</h1>
           <PhotoUploader photos={photos} onChange={setPhotos} />
-          <input
-            value={form.whatsapp}
-            onChange={(e) => set("whatsapp", e.target.value)}
-            inputMode="tel"
-            placeholder="Numéro WhatsApp * (+235…)"
-            className="w-full rounded-xl border border-gray-200 px-4 py-3"
-          />
+          <div>
+            <div className="relative">
+              <input
+                value={form.whatsapp}
+                onChange={(e) => set("whatsapp", e.target.value)}
+                inputMode="tel"
+                placeholder="Numéro WhatsApp * (+235…)"
+                className={`w-full rounded-xl border px-4 py-3 pr-10 ${
+                  form.whatsapp && !normalizeChadPhone(form.whatsapp)
+                    ? "border-zako-red"
+                    : "border-gray-200"
+                }`}
+              />
+              {form.whatsapp && normalizeChadPhone(form.whatsapp) && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-600 font-bold">✓</span>
+              )}
+            </div>
+            {form.whatsapp && !normalizeChadPhone(form.whatsapp) ? (
+              <p className="text-xs text-zako-red mt-1">
+                Format attendu : +235 et 8 chiffres (mobile commençant par 6, 7 ou 9).
+              </p>
+            ) : (
+              <p className="text-xs text-gray-400 mt-1">Ex. +235 66 12 34 56 — le numéro qui recevra les contacts.</p>
+            )}
+          </div>
           {error && <p className="text-sm text-zako-red">{error}</p>}
           <div className="flex gap-2">
             <button onClick={() => setStep(2)} className="px-4 py-3 rounded-xl border border-gray-200">

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getListings } from "@/lib/data";
 import { prisma, HAS_DB } from "@/lib/prisma";
+import { normalizeChadPhone } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Champs obligatoires manquants." }, { status: 400 });
   }
 
+  // Validation + normalisation du numéro WhatsApp (format tchadien).
+  const whatsapp = normalizeChadPhone(body.whatsapp);
+  if (!whatsapp) {
+    return NextResponse.json(
+      { error: "Numéro WhatsApp invalide. Format attendu : +235 et 8 chiffres (ex. +235 66 12 34 56)." },
+      { status: 400 }
+    );
+  }
+
   if (!HAS_DB) {
     // En mode démo on simule une création réussie.
     return NextResponse.json({ id: "demo-created", status: "PENDING", demo: true }, { status: 201 });
@@ -34,9 +44,9 @@ export async function POST(req: NextRequest) {
     // TODO: remplacer par l'utilisateur de la session (OTP). Pour l'instant, on
     // rattache à un compte "invité" identifié par le numéro WhatsApp.
     const user = await prisma.user.upsert({
-      where: { phone: body.whatsapp },
+      where: { phone: whatsapp },
       update: {},
-      create: { phone: body.whatsapp, whatsapp: body.whatsapp },
+      create: { phone: whatsapp, whatsapp },
     });
 
     const listing = await prisma.listing.create({
@@ -46,7 +56,7 @@ export async function POST(req: NextRequest) {
         price: Math.max(0, Math.floor(Number(body.price))),
         categoryId: body.categoryId,
         district: body.district || null,
-        whatsapp: body.whatsapp,
+        whatsapp,
         allowCall: body.allowCall ?? true,
         userId: user.id,
         status: "PENDING",

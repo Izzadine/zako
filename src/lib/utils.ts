@@ -27,6 +27,18 @@ export function telLink(phone: string): string {
   return `tel:${phone.replace(/[^0-9+]/g, "")}`;
 }
 
+// Valide + normalise un numéro tchadien au format international +235XXXXXXXX.
+// Accepte : "60010450", "+235 60 01 04 50", "23560010450", "0023560010450".
+// Mobiles tchadiens = 8 chiffres commençant par 6, 7 ou 9.
+// Renvoie le numéro normalisé "+235XXXXXXXX", ou null si invalide.
+export function normalizeChadPhone(input: string): string | null {
+  let digits = (input || "").replace(/\D/g, "");
+  if (digits.startsWith("00235")) digits = digits.slice(5);
+  else if (digits.startsWith("235")) digits = digits.slice(3);
+  if (!/^[679]\d{7}$/.test(digits)) return null;
+  return "+235" + digits;
+}
+
 // Miniature optimisée Cloudinary (WebP + compression) si l'URL en provient.
 export function thumb(url: string | null, width = 500): string | null {
   if (!url) return null;
