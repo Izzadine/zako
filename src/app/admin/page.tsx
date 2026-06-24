@@ -46,6 +46,13 @@ export default async function AdminPage() {
         <Link href="/" className="text-sm text-gray-500">← Site</Link>
       </div>
 
+      <Link
+        href="/admin/nouvelle"
+        className="flex items-center justify-center gap-2 w-full bg-zako-red text-white font-bold py-3 rounded-xl"
+      >
+        + Publier une annonce
+      </Link>
+
       {!HAS_DB && (
         <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-lg px-3 py-2">
           Mode DÉMO : configure <code>DATABASE_URL</code> puis <code>npm run db:seed</code> pour modérer de vraies annonces.

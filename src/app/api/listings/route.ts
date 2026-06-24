@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getListings } from "@/lib/data";
 import { prisma, HAS_DB } from "@/lib/prisma";
 import { normalizeChadPhone } from "@/lib/utils";
+import { getCurrentUser } from "@/lib/auth";
+import { PUBLISHING_OPEN } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +21,14 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  // Phase de lancement : publication publique fermée (seul l'admin publie via /admin).
+  if (!PUBLISHING_OPEN) {
+    return NextResponse.json(
+      { error: "La publication n'est pas encore ouverte au public. Contactez l'équipe Zako sur WhatsApp." },
+      { status: 403 }
+    );
+  }
+
   const body = await req.json();
 
   // Validation minimale
@@ -40,15 +50,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ id: "demo-created", status: "PENDING", demo: true }, { status: 201 });
   }
 
-  try {
-    // TODO: remplacer par l'utilisateur de la session (OTP). Pour l'instant, on
-    // rattache à un compte "invité" identifié par le numéro WhatsApp.
-    const user = await prisma.user.upsert({
-      where: { phone: whatsapp },
-      update: {},
-      create: { phone: whatsapp, whatsapp },
-    });
+  // Login obligatoire : il faut une session valide (OTP vérifié).
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Connexion requise pour publier une annonce." }, { status: 401 });
+  }
 
+  try {
     const listing = await prisma.listing.create({
       data: {
         title: String(body.title).slice(0, 120),

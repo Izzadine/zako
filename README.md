@@ -73,12 +73,22 @@ src/
 (défaut `admin`) et `ADMIN_PASSWORD`. En production, **`ADMIN_PASSWORD` est obligatoire** :
 sans lui, l'admin renvoie 503 (jamais ouvert en ligne).
 
+## 🔑 Authentification (OTP téléphone)
+
+Connexion par code SMS à 6 chiffres. Le téléphone est l'identité.
+- Endpoints : `POST /api/auth/otp/request`, `POST /api/auth/otp/verify`, `GET /api/me`, `POST /api/auth/logout`.
+- Session = JWT signé dans un cookie httpOnly (`AUTH_SECRET`).
+- **Login obligatoire pour publier** (`POST /api/listings` renvoie 401 sans session).
+- Envoi SMS via **Twilio** ([src/lib/sms.ts](src/lib/sms.ts)). Si `TWILIO_*` est vide → **mode stub**
+  (le code est journalisé/renvoyé en dev, **pas** envoyé). ⚠️ En production, sans clés Twilio,
+  les vrais utilisateurs ne reçoivent jamais le code : configure Twilio avant de compter sur le login.
+
 ## ⚠️ À faire avant la production
 
-- **Authentification OTP** (téléphone) — voir `src/app/mon-compte`. Brancher Supabase Auth
-  ou un provider SMS, puis protéger `POST /api/listings`.
+- ✅ ~~Authentification OTP~~ — fait.
 - ✅ ~~Protéger `/admin`~~ — fait (Basic Auth).
-- Rate-limiting sur l'upload et la création d'annonces (anti-spam).
+- **Configurer Twilio** (`TWILIO_ACCOUNT_SID`/`_AUTH_TOKEN`/`_FROM`) pour l'envoi réel des SMS.
+- Rate-limiting sur l'upload (la création OTP est déjà limitée à 1/min).
 
 ## ☁️ Déploiement (Vercel)
 
@@ -92,5 +102,7 @@ sans lui, l'admin renvoie 503 (jamais ouvert en ligne).
    | `CLOUDINARY_CLOUD_NAME` / `_API_KEY` / `_API_SECRET` | depuis Cloudinary |
    | `NEXT_PUBLIC_SITE_URL` | l'URL publique (ex. `https://zako.vercel.app`) |
    | `ADMIN_USER` / `ADMIN_PASSWORD` | identifiants admin (mot de passe **fort**) |
+   | `AUTH_SECRET` | **obligatoire** — secret aléatoire fort (sessions + OTP) |
+   | `TWILIO_ACCOUNT_SID` / `_AUTH_TOKEN` / `_FROM` | requis pour envoyer de vrais SMS |
 
 4. **Deploy**. La DB et Cloudinary restent sur leurs services managés.

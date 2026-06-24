@@ -78,3 +78,14 @@ model Photo {
   listingId String
   listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
 }
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  phone     String // +235XXXXXXXX
+  codeHash  String // HMAC-SHA256 du code à 6 chiffres
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([phone])
+}

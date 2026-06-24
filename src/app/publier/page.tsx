@@ -2,12 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { PhotoUploader, type UploadedPhoto } from "@/components/PhotoUploader";
 import { normalizeChadPhone } from "@/lib/utils";
+import { PUBLISHING_OPEN, ZAKO_WHATSAPP } from "@/lib/config";
+import { useMe } from "@/hooks/useMe";
 import type { Category } from "@/types";
 
 export default function PublishPage() {
   const router = useRouter();
+  const { user, loading } = useMe();
   const [categories, setCategories] = useState<Category[]>([]);
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
@@ -29,6 +33,12 @@ export default function PublishPage() {
       .then((d) => setCategories(d.data ?? []))
       .catch(() => {});
   }, []);
+
+  // Pré-remplit le numéro WhatsApp avec celui du compte connecté.
+  useEffect(() => {
+    const num = user?.whatsapp ?? user?.phone;
+    if (num) setForm((f) => (f.whatsapp ? f : { ...f, whatsapp: num }));
+  }, [user]);
 
   function set<K extends keyof typeof form>(k: K, v: string) {
     setForm((f) => ({ ...f, [k]: v }));
@@ -59,6 +69,50 @@ export default function PublishPage() {
       setError(e.message);
       setSubmitting(false);
     }
+  }
+
+  // Phase de lancement : publication réservée à l'équipe Zako.
+  if (!PUBLISHING_OPEN) {
+    const waLink = `https://wa.me/${ZAKO_WHATSAPP.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
+      "Bonjour Zako, je souhaite publier une annonce."
+    )}`;
+    return (
+      <div className="text-center py-12 space-y-4">
+        <div className="text-5xl">📣</div>
+        <h1 className="text-lg font-bold">Vous voulez vendre ?</h1>
+        <p className="text-gray-600 text-sm max-w-xs mx-auto">
+          Pour l'instant, c'est l'équipe Zako qui publie les annonces. Envoyez-nous votre article
+          (photos + prix) sur WhatsApp, on le met en ligne pour vous, gratuitement.
+        </p>
+        <a
+          href={waLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center gap-2 bg-zako-wa text-white font-bold px-6 py-3 rounded-xl"
+        >
+          Envoyer mon annonce sur WhatsApp
+        </a>
+      </div>
+    );
+  }
+
+  // Connexion obligatoire pour publier.
+  if (loading) {
+    return <p className="text-gray-400 text-sm py-10 text-center">Chargement…</p>;
+  }
+  if (!user) {
+    return (
+      <div className="text-center py-12 space-y-4">
+        <div className="text-5xl">🔒</div>
+        <h1 className="text-lg font-bold">Connexion requise</h1>
+        <p className="text-gray-600 text-sm max-w-xs mx-auto">
+          Pour publier une annonce, connecte-toi avec ton numéro de téléphone (c'est gratuit et rapide).
+        </p>
+        <Link href="/mon-compte" className="inline-block bg-zako-red text-white font-bold px-6 py-3 rounded-xl">
+          Se connecter
+        </Link>
+      </div>
+    );
   }
 
   return (
